@@ -163,6 +163,19 @@ ggplot(oil_gfun, aes(x = r, y = obs))+
 
 ```
 
+###Nearest neighbor using Lfunction (Ripley's K, standardized)
+
+```{r}
+
+r2<- seq(0,3, by = 0.5)
+oil_lfun <- envelope(all_ppp, fun = Lest, r = r2, nsim = 20, global = TRUE)
+#looks at every point in space and makes increasing bubbles until all observation points are incorporated
+
+ggplot(oil_lfun, aes(x = r2, y = obs))+
+  geom_line(color = "purple")+
+  geom_line(aes(x = r2, y =theo), color = "blue")
+
+```
 
 
 

@@ -56,6 +56,119 @@ leaflet(oil_sf) %>%
 ```
 
 
+## tmap plot with the Texas state shapefile
+
+```{r}
+
+states <- st_read(dsn = ".", layer = "states")
+
+tx_border<- states %>% 
+  filter(STATE_NAME == "Texas") %>% 
+  st_transform(4326) #change CRS to match other one, would need different code if no previous CRS. in this case we are just changing CRS, not putting new
+
+plot(tx_border)
+
+tm_shape(tx_border)+
+  tm_polygons()+
+  tm_shape(oil_sf)+ #oil spill points
+  tm_dots(size = 0.3)
+
+```
+
+Does this point pattern follow CSR? (even distribution?)
+
+###Convert the data to spatial points patterns (combo of point data and the bounding window)
+
+```{r}
+spill_sp<- as(oil_sf, "Spatial") #change to spatial data
+spill_ppp <- as(spill_sp, "ppp")
+#ppp = point pattern analysis; convert spatial data to point pattern
+
+#bounding window = outline of texas "owin" = window
+
+tx_sp<- as(tx_border, "Spatial")
+tx_owin<- as(tx_sp, "owin")
+
+all_ppp <- ppp(spill_ppp$x, spill_ppp$y, window = tx_owin)
+#omits points outside of bounding box
+
+#taken spatial info, making in PPP which R recognizes
+
+```
+
+###A density plot:
+
+```{r}
+
+plot(density(all_ppp, sigma =0.5))
+
+```
+
+
+###Quadrat test for spatial evenness
+
+Are oil spills evenly distributed throughout the state?
+
+```{r}
+
+oil_qt<- quadrat.test(all_ppp, nx = 5, ny = 5)
+#5 regions horizontally, 5 vertically - creates quadrats of designated size
+oil_qt
+#very small p value
+#look at data - spatial spread of oil spills look somewhat clustered, not CSR
+#quadrat.test NULL is that the data point pattern follows CSR
+#small p value - reject NULL - retain alternative that data are NOT CSR - data are NOT evenly distributed
+
+
+plot(all_ppp)
+plot(oil_qt, add = TRUE, cex = 0.4)
+
+#crosses where "illegal" points
+#second plot adds quadrat we chose
+```
+
+
+within each quadrat:
+-if data were truly spread evenly, the number of events that would occur in each quadrat (above, it is 14.5 oil spill events)
+- in not full quadrats, calculates how many events should be given a smaller area (ex. from above is 11.6 total events in upper mid-left quadrat)
+
+If I have data more clustered that CSR - will nearest neighbors be closer or further than in CSR?
+- Nearest neighbors will be closer together on average
+
+If data is more even than CSR
+- fewer point pairs that have nearest neighbors at short distances from each other
+
+--> consider how all points are surrounding each other with increasing radii around each point to see what the density of enighbors at larger bubbles
+
+###G-function for nearest neighbor analysis
+
+```{r}
+
+r<- seq(0,1, by = 0.01)
+
+oil_gfun<- envelope(all_ppp, fun = Gest, r = r, nsim = 100)
+
+ggplot(oil_gfun, aes(x = r, y = obs))+
+  geom_line(color = "black")+
+  geom_line(aes(x = r, y = theo), color = "red")
+  
+
+#Gest = g estimate
+#distance of range to look for nearest neighbors
+#nsim= run number of simulations
+  #obs is actual data values
+
+#our graph relative to CSR(red) has a higher proporation of point pairs with nearest neighbors at shorter distances compared to CSR data
+# on average our data points have closer nearest neighbors than we would expect if completely CSR
+
+```
+
+
+
+
+
+
+
 
 
 
